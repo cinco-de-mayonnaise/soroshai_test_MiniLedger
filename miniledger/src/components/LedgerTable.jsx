@@ -22,14 +22,22 @@ export default function LedgerTable() {
             <td className="p-3 border-b text-gray-500 italic">Pending</td>
           </tr>
 
-          <tr>
-            <td className="p-3 border-b">A002</td>
-            <td className="p-3 border-b">500</td>
-            <td className="p-3 border-b">—</td>
-            <td className="p-3 border-b text-gray-500 italic">Pending</td>
-          </tr>
+          {InsertTableRow("A002", 500, "—", "Pending")}
+
         </tbody>
       </table>
     </div>
   );
+}
+
+function InsertTableRow(accountId, initBal, finalBal, Status)
+{
+    return (
+      <tr>
+        <td className="p-3 border-b">{accountId}</td>
+        <td className="p-3 border-b">{initBal}</td>
+        <td className="p-3 border-b">{finalBal}</td>
+        <td className="p-3 border-b text-gray-500 italic">{Status}</td>
+      </tr>
+    );
 }

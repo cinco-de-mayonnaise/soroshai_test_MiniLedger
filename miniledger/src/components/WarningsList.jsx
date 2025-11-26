@@ -10,11 +10,18 @@ export default function WarningsList() {
           <p className="text-sm text-red-600 mt-1">Reason: Insufficient funds</p>
         </div>
 
-        <div className="border-l-4 border-red-500 bg-red-50 p-3 rounded">
-          <p className="font-semibold text-red-700">T102 – Invalid Transaction</p>
-          <p className="text-sm text-red-600 mt-1">Reason: Duplicate transaction ID</p>
-        </div>
+        {InsertWarning("T102", "Duplicate transaction ID")}
       </div>
     </div>
   );
+}
+
+function InsertWarning(transId, reason)
+{
+    return (
+      <div className="border-l-4 border-red-500 bg-red-50 p-3 rounded">
+        <p className="font-semibold text-red-700">{transId} – Invalid Transaction</p>
+        <p className="text-sm text-red-600 mt-1">Reason: {reason}</p>
+      </div>
+    );
 }
