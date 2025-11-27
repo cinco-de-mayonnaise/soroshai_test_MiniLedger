@@ -1,18 +1,29 @@
 import { useState } from 'react'
 
-export default function FileUpload() {
+export default function FileUpload({ onFileLoaded, onClear }) {
 
   const [curFile, set_curFile] = useState(null);
-
   
   function loadFile(event)
   {
-
     const file = event.target.files[0];
     if (!file)
       return;
 
-    set_curFile(file.name);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target.result);
+        //console.log(json);
+        onFileLoaded(json);
+
+        set_curFile(file.name);
+      } catch (err) {
+        alert("Invalid JSON file!" + err.toString());
+      }
+    };
+    
+    reader.readAsText(file);
   }
 
   function clearLoadedFile()
@@ -20,6 +31,7 @@ export default function FileUpload() {
     // TODO: also clear Ledger Table and Warnings
 
     set_curFile(null);
+    onClear();
   }
 
   return (

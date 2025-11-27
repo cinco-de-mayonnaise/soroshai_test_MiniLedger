@@ -1,9 +1,8 @@
 import { STATUS } from "../Constants";
 
-export default function WarningsList() {
+export default function WarningsList({data}) {
 
   var timethen = Date.parse("2025-01-01T10:00");
-
 
   return (
     <div className="bg-white shadow-md rounded-lg p-6">
