@@ -1,4 +1,10 @@
+import { STATUS } from "../Constants";
+
 export default function WarningsList() {
+
+  var timethen = Date.parse("2025-01-01T10:00");
+
+
   return (
     <div className="bg-white shadow-md rounded-lg p-6">
       <h2 className="text-xl font-semibold mb-4">Warnings</h2>
@@ -10,12 +16,17 @@ export default function WarningsList() {
           <p className="text-sm text-red-600 mt-1">Reason: Insufficient funds</p>
         </div>
 
-        {InsertWarning("T102", "Duplicate transaction ID")}
+        {InsertWarning("T102", STATUS.SAMETRANSID)}
+        {InsertWarning("T102", STATUS.NOTENOUGH)}
+        {InsertWarning("T102", STATUS.UNKNOWNACC)}
+        {InsertWarning("T102", STATUS.SAMEACC)}
+        {InsertWarning("T102", STATUS.INVALIDTRANS)}
       </div>
     </div>
   );
 }
 
+/* UI-only function */
 function InsertWarning(transId, reason)
 {
     return (

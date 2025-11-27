@@ -12,7 +12,14 @@ export default function FileUpload() {
     if (!file)
       return;
 
-    set_curFile(file.name)
+    set_curFile(file.name);
+  }
+
+  function clearLoadedFile()
+  {
+    // TODO: also clear Ledger Table and Warnings
+
+    set_curFile(null);
   }
 
   return (
@@ -25,8 +32,7 @@ export default function FileUpload() {
         <p className="text-gray-700">Drag & drop or click to upload</p>
         <p className="text-sm text-gray-500 mt-2">Only JSON files are allowed</p>
 
-        <input 
-          type="file"
+        <input type="file"
           accept=".json"
           className="hidden"
           onChange={(ev) => loadFile(ev)}
@@ -34,21 +40,21 @@ export default function FileUpload() {
         </label>
       )}
     
+      {/* show this instead if a file was uploaded. */}
       {curFile && (
           <div className="flex flex-col items-center space-y-3">
           <p className="text-gray-800 font-medium">
             Currently Open: <span className="font-semibold italic">{curFile}</span>
           </p>
 
-          <button
-            onClick={() => set_curFile(null)}
+          <button onClick={clearLoadedFile}
             className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
           >
             Remove File
           </button>
         </div>
       )}
-
+      
     </div>
   );
 }
