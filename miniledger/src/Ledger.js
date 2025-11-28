@@ -3,7 +3,7 @@ import { STATUS, TRANSTYPE, TransactionWarning} from "./Constants";
 const accounts = new Set(); // if an account is not in this list, its invalid (maybe allow external accounts?)
 
 
-class Account
+export class Account
 {
     constructor(id, initbal)
     {
@@ -23,7 +23,7 @@ class Account
     }
 }
 
-class LedgerRecord // represents a single transaction row
+export class LedgerRecord // represents a single transaction row
 {
     constructor(id, type, timestamp, acc1, acc2, amount)
     {
@@ -35,15 +35,17 @@ class LedgerRecord // represents a single transaction row
         this.type = type;
         try
         {
-            timestamp_unix = Date.parse(timestamp); // parse timestamps to UNIX for standardness. 
+            //console.log(timestamp);
+            const timestamp_unix = Date.parse(timestamp); // parse timestamps to UNIX for standardness. 
                                                     // UNIX time is always relative to GMT+0.
                                                     // to render on clientside, just use the client's time zone as offset
                                                     // also we can use this to sort transactions
+            //console.log(timestamp_unix);
             this.timestamp = timestamp_unix;
         }
         catch (error)
         {
-            throw TypeError("Invalid `timestamp` could not be parsed");
+            throw TypeError("Invalid `timestamp` could not be parsed " + error.toString());
         }
         
         // TODO: transaction id validation here
@@ -59,7 +61,9 @@ class LedgerRecord // represents a single transaction row
         {
             case TRANSTYPE.DEPOSIT:
             case TRANSTYPE.WITHDRAW:
-                if (!accounts.includes(acc1))   // account not found for constructor
+                console.log(acc1);
+                console.log(accounts);
+                if (!accounts.has(acc1))   // account not found for constructor
                     this.status = STATUS.UNKNOWNACC; // throw TransactionWarning(STATUS.UNKNOWNACC);  
 
                 break;
@@ -67,7 +71,7 @@ class LedgerRecord // represents a single transaction row
                 if (acc2 == null || !(acc2 instanceof Account))
                     throw TypeError("`acc2` must be a valid reference to an Account class");
                 
-                if (!accounts.includes(acc2))  
+                if (!accounts.has(acc2))  
                     this.status = STATUS.UNKNOWNACC; // throw TransactionWarning(STATUS.UNKNOWNACC);  
 
                 if (acc1 == acc2)
@@ -111,9 +115,10 @@ export class TransactionLedger // responsible for keeping track of accounts and 
      * 
      * Instantiating this class again will reset the TransactionLedger.
      */
-    constructor()
+    constructor()  // singleton does not exist
     {
         accounts.clear();
+        this.processed = false;
         this.transactions = [];  // I really wanted to use a Red-Black Tree but Javascript is a bad language, haven't found a standard DS library
     }
 
@@ -135,7 +140,7 @@ export class TransactionLedger // responsible for keeping track of accounts and 
         accounts.add(n);
     }
 
-    static compareRecord_timestamp(a, b)
+    static _compareRecord_timestamp(a, b)
     {
         if (a.timestamp > b.timestamp)
             return 1;
@@ -145,9 +150,31 @@ export class TransactionLedger // responsible for keeping track of accounts and 
         return 0;
     }
 
+    /**
+     * Adds a transaction record to the TransactionLedger. 
+     * 
+     * This will throw an Error if the transaction record is invalid due to argument errors such as timestamp being invalid,
+     * or an invalid transaction type is defined, or if mandatory arguments are empty.
+     * 
+     * @param {string} id 
+     * @param {TRANSTYPE} type 
+     * @param {string} timestamp 
+     * @param {string} acc1 
+     * @param {?string} acc2 
+     * @param {number} amount 
+     */
     addTransaction(id, type, timestamp, acc1, acc2, amount)
     {
-        const t = new LedgerRecord(id, type, timestamp, acc1, acc2, amount);
+        let makeshift_acc1 = new Account(acc1);
+        let makeshift_acc2 = null;
+        try {
+            makeshift_acc2 = new Account(acc2);
+        }
+        catch (error)
+        {
+            1+1; // do nothing
+        }
+        const t = new LedgerRecord(id, type, timestamp, makeshift_acc1, makeshift_acc2, amount);
 
         // it is fine for multiple records to have the same id (concurrency issue, etc.)
         this.transactions.push(t);
@@ -155,25 +182,71 @@ export class TransactionLedger // responsible for keeping track of accounts and 
         // did some research, turns out Javascript built-in sort uses Timsort, which is very fast for already sorted arrays
         // was thinking of manually putting in an insertion sort code in here which would give us O(n) insertion time but 
         // have an already sorted array, which is what i'd for large numbers of transactions.
-        this.transactions.sort(compareRecord_timestamp)
+        this.transactions.sort(this._compareRecord_timestamp)
     }
 
     /**
      * Processes the transactions added to the accounts involving them and returns a map of
      * final balances of all accounts indicating how much money is in each account.
+     * 
+     * 
+     * ..... ONLY NOW do I realise that every ledgerRecord has its own account instances when it was sufficient for 
+     * them to just have a string. No time now, I can just ignore those classes and only use the classes inside the 
+     * `accounts` global var to track balances across transactions.
+     * 
      */
     process()
     {
-        
-        for (const t of this.transactions)
-        {
+        // accounts is a global variable, Set of class Accounts.
+        // Accounts contain id and balance. Two accounts instances are equal if their id is equal.
 
+        if (this.processed)
+            return accounts;  // accounts already contains the final balances, avoid more mutation
+
+        const accounts_ls = new Map() 
+        for (const acc of accounts)
+            accounts_ls.set(acc.id, acc);  // map of ids to account references IN `accounts` GLOBAL VAR!!
+
+        // the array is sorted by timestamp, so we can process transactions in order
+        for (let i = 0; i < this.transactions.length; i++)
+        {
+            const t = this.transactions[i];
+            const acc1 = accounts_ls.get(t.acc1.id);
+            const acc2 = accounts_ls.get(t.acc2.id);  // does this make a reference???
+
+            switch (t.type)
+            {
+                case TRANSTYPE.DEPOSIT:
+                    acc1.balance += t.amount;
+                    break;
+                case TRANSTYPE.WITHDRAW:
+                    if (acc1.balance >= t.amount)
+                        acc1.balance -= t.amount;
+                    else // this trans is invalid
+                        t.status = STATUS.INVALIDTRANS;
+                    break;
+                case TRANSTYPE.TRANSFER:
+                    if (acc1.balance >= t.amount)
+                    {
+                        acc1.balance -= t.amount;
+                        acc2.balance += t.amount;
+                    }
+                    else
+                        t.status = STATUS.INVALIDTRANS;
+                    break;
+            }
         }
 
+        this.processed = true;
+        return accounts;
     }
 
     /**
-     * Returns the list of transactions, sorted by timestamp
+     * Returns the list of transactions, sorted by timestamp. 
+     * 
+     * If process() has been executed, then the list of transactions
+     * may be modified w.r.t. what was passed to the class on initialization. This is because some transactions may become
+     * invalid depending on the current account balance.
      */
     getTransactions()
     {

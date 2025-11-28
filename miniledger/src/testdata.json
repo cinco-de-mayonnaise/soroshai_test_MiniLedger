@@ -1,0 +1,32 @@
+{
+    "accounts": [
+        {
+            "id": "A001",
+            "balance": 1000
+        },
+        {
+            "id": "A002",
+            "balance": 500
+        },
+        {
+            "id": "A003",
+            "balance": 0
+        }
+    ],
+    "transactions": [
+        {
+            "id": "T100",
+            "timestamp": "2025-01-01T10:00",
+            "type": "DEPOSIT",
+            "account": "A001",
+            "amount": 200
+        },
+        {
+            "id": "T101",
+            "timestamp": "2025-01-01T10:01",
+            "type": "WITHDRAW",
+            "account": "A002",
+            "amount": 600
+        }
+    ]
+}
