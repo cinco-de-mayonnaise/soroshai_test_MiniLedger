@@ -1,9 +1,9 @@
 import { STATUS, TRANSTYPE, TransactionWarning} from "./Constants";
 
-const accounts = new Set(); // if an account is not in this list, its invalid (maybe allow external accounts?)
+const accounts = new Set(); // set of ids(string): if an account is not in this list, its invalid (maybe allow external accounts?)
+const accounts_inst = new Map(); // map of ids -> Account instances
 
-
-export class Account
+class Account
 {
     constructor(id, initbal)
     {
@@ -23,7 +23,7 @@ export class Account
     }
 }
 
-export class LedgerRecord // represents a single transaction row
+class LedgerRecord // represents a single transaction row
 {
     constructor(id, type, timestamp, acc1, acc2, amount)
     {
@@ -51,8 +51,8 @@ export class LedgerRecord // represents a single transaction row
         // TODO: transaction id validation here
         this.id = id;
 
-        if (acc1 == null || !(acc1 instanceof Account))
-            throw TypeError("`acc1` must be a valid reference to an Account class");
+        if (acc1 == null)
+            throw TypeError("`acc1` must be a valid id of an Account class");
 
         if (amount <= 0)
             this.status = STATUS.INVALIDTRANS; // throw TransactionWarning(STATUS.INVALIDTRANS);
@@ -61,15 +61,15 @@ export class LedgerRecord // represents a single transaction row
         {
             case TRANSTYPE.DEPOSIT:
             case TRANSTYPE.WITHDRAW:
-                console.log(acc1);
-                console.log(accounts);
+                //console.log(acc1);
+                //console.log(accounts);
                 if (!accounts.has(acc1))   // account not found for constructor
                     this.status = STATUS.UNKNOWNACC; // throw TransactionWarning(STATUS.UNKNOWNACC);  
 
                 break;
             case TRANSTYPE.TRANSFER:
-                if (acc2 == null || !(acc2 instanceof Account))
-                    throw TypeError("`acc2` must be a valid reference to an Account class");
+                if (acc2 == null)
+                    throw TypeError("`acc2` must be a valid id of an Account class");
                 
                 if (!accounts.has(acc2))  
                     this.status = STATUS.UNKNOWNACC; // throw TransactionWarning(STATUS.UNKNOWNACC);  
@@ -118,6 +118,7 @@ export class TransactionLedger // responsible for keeping track of accounts and 
     constructor()  // singleton does not exist
     {
         accounts.clear();
+        accounts_inst.clear();
         this.processed = false;
         this.transactions = [];  // I really wanted to use a Red-Black Tree but Javascript is a bad language, haven't found a standard DS library
     }
@@ -134,10 +135,12 @@ export class TransactionLedger // responsible for keeping track of accounts and 
     addAccount(id, initial_balance=0)
     {
         const n = new Account(id, initial_balance);
-        if (accounts.has(n))
+
+        if (accounts.has(id))
             throw Error("This account already exists!");
 
-        accounts.add(n);
+        accounts.add(id);
+        accounts_inst.set(id, n);
     }
 
     static _compareRecord_timestamp(a, b)
@@ -165,16 +168,8 @@ export class TransactionLedger // responsible for keeping track of accounts and 
      */
     addTransaction(id, type, timestamp, acc1, acc2, amount)
     {
-        let makeshift_acc1 = new Account(acc1);
-        let makeshift_acc2 = null;
-        try {
-            makeshift_acc2 = new Account(acc2);
-        }
-        catch (error)
-        {
-            1+1; // do nothing
-        }
-        const t = new LedgerRecord(id, type, timestamp, makeshift_acc1, makeshift_acc2, amount);
+  
+        const t = new LedgerRecord(id, type, timestamp, acc1, acc2, amount);
 
         // it is fine for multiple records to have the same id (concurrency issue, etc.)
         this.transactions.push(t);
@@ -201,18 +196,22 @@ export class TransactionLedger // responsible for keeping track of accounts and 
         // Accounts contain id and balance. Two accounts instances are equal if their id is equal.
 
         if (this.processed)
-            return accounts;  // accounts already contains the final balances, avoid more mutation
-
-        const accounts_ls = new Map() 
-        for (const acc of accounts)
-            accounts_ls.set(acc.id, acc);  // map of ids to account references IN `accounts` GLOBAL VAR!!
+            return this.getBalances();  // accounts already contains the final balances, avoid more mutation
+        
+        const transid_processed = new Set();
 
         // the array is sorted by timestamp, so we can process transactions in order
         for (let i = 0; i < this.transactions.length; i++)
         {
             const t = this.transactions[i];
-            const acc1 = accounts_ls.get(t.acc1.id);
-            const acc2 = accounts_ls.get(t.acc2.id);  // does this make a reference???
+            if (transid_processed.has(t.id))
+            {
+                t.status = STATUS.IGNORED;
+                continue;
+            }
+
+            const acc1 = accounts_inst.get(t.acc1);
+            const acc2 = accounts_inst.get(t.acc2);  // does this make a reference???
 
             switch (t.type)
             {
@@ -223,7 +222,7 @@ export class TransactionLedger // responsible for keeping track of accounts and 
                     if (acc1.balance >= t.amount)
                         acc1.balance -= t.amount;
                     else // this trans is invalid
-                        t.status = STATUS.INVALIDTRANS;
+                        t.status = STATUS.NOTENOUGH;
                     break;
                 case TRANSTYPE.TRANSFER:
                     if (acc1.balance >= t.amount)
@@ -232,13 +231,15 @@ export class TransactionLedger // responsible for keeping track of accounts and 
                         acc2.balance += t.amount;
                     }
                     else
-                        t.status = STATUS.INVALIDTRANS;
+                        t.status = STATUS.NOTENOUGH;
                     break;
             }
+
+            transid_processed.add(t.id);
         }
 
         this.processed = true;
-        return accounts;
+        return this.getBalances();
     }
 
     /**
@@ -252,5 +253,26 @@ export class TransactionLedger // responsible for keeping track of accounts and 
     {
         return this.transactions;
     }
+
+    /**
+     * Returns a list of balances for every account added to the ledger.
+     * 
+     * If process() hasn't been called, this is the list of initial balances for every account added to the ledger.
+     * 
+     * If process() has been called, this is the list of final balances for every account added to the ledger.
+     */
+    getBalances()
+    {
+        const retbal = new Map();
+        for (const id of accounts)
+        {
+            //console.log(id, accounts_inst.get(id).balance);
+            retbal.set(id, accounts_inst.get(id).balance);
+        }
+
+        return retbal;
+    }
+
+
 
 }

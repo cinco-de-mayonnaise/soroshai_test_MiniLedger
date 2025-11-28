@@ -27,6 +27,7 @@ export class STATUS {// Enum class
 
     static #_PENDING        = "Pending";                      // Sender account balance < transaction
     static #_ACCEPTED       = "OK";                           // done successfully
+    static #_IGNORED        = "Ignored";                      // ignore later identical transaction ids
 
     // errors/warnings
     static #_NOTENOUGH      = "Insufficient funds";           // Sender account balance < transaction
@@ -39,6 +40,7 @@ export class STATUS {// Enum class
     // Accessors for "get" functions only (no "set" functions)
     static get PENDING()        { return this.#_PENDING; }
     static get ACCEPTED()       { return this.#_ACCEPTED; }
+    static get IGNORED()        { return this.#_IGNORED; }
     static get NOTENOUGH()      { return this.#_NOTENOUGH; }
     static get SAMETRANSID()    { return this.#_SAMETRANSID; }
     static get UNKNOWNACC()     { return this.#_UNKNOWNACC; }
@@ -47,7 +49,7 @@ export class STATUS {// Enum class
 
     // stuff needed for type checking enforcement
     static values() {
-        return this.errors() + [this.PENDING, this.ACCEPTED];
+        return this.errors() + [this.PENDING, this.ACCEPTED, this.IGNORED];
     }
 
     static errors() {

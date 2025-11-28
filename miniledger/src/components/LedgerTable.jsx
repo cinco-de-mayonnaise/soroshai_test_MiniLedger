@@ -48,15 +48,9 @@ export default function LedgerTable({data}) {
         </thead>
 
         <tbody>
-          {/* Placeholder Row */}
-          <tr>
-            <td className="p-3 border-b">A001</td>
-            <td className="p-3 border-b">1000</td>
-            <td className="p-3 border-b">—</td>
-            <td className="p-3 border-b text-gray-500 italic">Pending</td>
-          </tr>
-
-          {InsertTableRow("A002", 500, "—", "Pending")}
+          {/* Insert rows*/}
+          
+          {InsertLedger(data)}
 
         </tbody>
       </table>)}
@@ -65,14 +59,33 @@ export default function LedgerTable({data}) {
   );
 }
 
+function InsertLedger(data) {
+  // return data.map((item, index) =>
+  //   InsertTableRow(
+  //     item.id,
+  //     item.initialBalance,
+  //     item.finalBalance,
+  //     item.status
+  //   )
+  // );
+  let ret = [];
+
+  for (const [accId, balances] of data) {
+    ret.push(InsertTableRow(accId, balances[0], balances[1], "Pending"));
+  }
+
+  return ret;
+}
+
+
 function InsertTableRow(accountId, initBal, finalBal, Status)
 {
     return (
       <tr>
-        <td className="p-3 border-b">{accountId}</td>
-        <td className="p-3 border-b">{initBal}</td>
-        <td className="p-3 border-b">{finalBal}</td>
-        <td className="p-3 border-b text-gray-500 italic">{Status}</td>
+        <td className="p-3 border-b">{accountId ?? "—"}</td>
+        <td className="p-3 border-b">{initBal ?? "—"}</td>
+        <td className="p-3 border-b">{finalBal ?? "—"}</td>
+        <td className="p-3 border-b text-gray-500 italic">{Status ?? "—"}</td>
       </tr>
     );
 }

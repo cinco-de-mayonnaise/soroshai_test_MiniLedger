@@ -6,12 +6,11 @@ import Header from "../components/Header";
 import FileUpload from "../components/FileUpload";
 import LedgerTable from "../components/LedgerTable";
 import WarningsList from "../components/WarningsList";
+import { STATUS } from '../Constants';
 
 export default function Home() {
-  const [ledgerData, setLedgerData] = useState(5);
-  const [warnings, setWarnings] = useState(5);  // dummy vars to test clearing
-
-
+  const [ledgerData, setLedgerData] = useState(null);
+  const [warnings, setWarnings] = useState(null);  // dummy vars to test clearing
 
   function handleFileLoaded(json)
   {
@@ -50,20 +49,26 @@ export default function Home() {
     }
 
     // process transactions
+    const initial_balances = theLedger.getBalances();
     const final_balances = theLedger.process(); // currently unnecessary
     const l = theLedger.getTransactions(); // contains both warnings and ledgerData
-
+    const w = [];
     // // extract warnings
-    // for (const i of l)
-    // {
+    for (const i of l)
+    {
+      if (STATUS.errors().includes(i.status))
+        w.push(i);
+    }
 
-    // }
-    console.log(l);
-    console.log(final_balances);
-  
+    // make combined balances and send to ledger
+    const combinedBalances = new Map();
+    for (const [accId, initBal] of initial_balances) {
+      const finalBal = final_balances.get(accId) ?? initBal; // fallback in case final_balance is missing
+      combinedBalances.set(accId, [initBal, finalBal]);
+    }
 
-    setLedgerData(5);
-    setWarnings(5);
+    setLedgerData(combinedBalances);
+    setWarnings(w);
   }
 
   function handleFileCleared()
